@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">CSE541Robotics</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="connectionErrDialogTitle">Connection Error</string>
+    <string name="noConnMsg">Not connected to Wifi. Please connect to Wifi.</string>
+    <string name="posBtnTxt">Okay</string>
+</resources>
