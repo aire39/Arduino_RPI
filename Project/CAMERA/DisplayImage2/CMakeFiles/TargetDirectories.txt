@@ -1,0 +1,1 @@
+/home/pi/Desktop/Project/DisplayImage2/CMakeFiles/DisplayImage.dir

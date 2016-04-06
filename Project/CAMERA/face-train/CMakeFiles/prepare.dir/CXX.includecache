@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/sean/Desktop/Project/face-train/preparePhoto.cpp
+opencv2/objdetect/objdetect.hpp
+/home/sean/Desktop/Project/face-train/opencv2/objdetect/objdetect.hpp
+opencv2/highgui/highgui.hpp
+/home/sean/Desktop/Project/face-train/opencv2/highgui/highgui.hpp
+opencv2/imgproc/imgproc.hpp
+/home/sean/Desktop/Project/face-train/opencv2/imgproc/imgproc.hpp
+iostream
+-
+stdio.h
+-
+dirent.h
+-
+

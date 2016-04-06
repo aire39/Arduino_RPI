@@ -1,0 +1,9 @@
+There is 2 ways to handle the servos.
+
+1) Pulse
+-- Not too hard to deal with but would need to create a buffer as I would need
+to continually send it the correct pulse through a loop of some sort
+
+2) PWM which is only available on GPIO18 (pin 12).
+-- I bought an extender for more PWM control so I should have more than 1 though it needs setup. I can more easily send the angle through the PWM signal.
+

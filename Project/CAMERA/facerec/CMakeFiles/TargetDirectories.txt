@@ -1,0 +1,1 @@
+/home/sean/Desktop/Project/facerec/CMakeFiles/reco.dir
