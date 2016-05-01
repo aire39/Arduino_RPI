@@ -1,4 +1,7 @@
 /*
+* Manually Simulate Controller Input Using Arduino Pro Mini 
+* SNES Controller info (http://www.gamefaqs.com/snes/916396-super-nintendo/faqs/5395) 
+* 
 * Arduino Pro Mini (https://www.adafruit.com/products/2378)
 *
 * Using this to take over the resposniblity of how the controller recieves/sends
@@ -14,20 +17,20 @@ byte pulseCount    = 1;  // counter when looping
 
 unsigned long currentTime    = 0;
 unsigned long previousTime   = 0;
-const unsigned long interval = 16670;
-byte sample  = 0;
-byte data[2] = {0};
+const unsigned long interval = 16670; // 60hz -> 16.67ms in microseconds
+byte sample  = 0;   // current bit controller clock cycle that will get shifted into the data array.
+byte data[2] = {0}; // 2 bytes for button data/ First byte holds the first 8 buttons and the other byte holds the last 4 buttons
 
-const byte LATCH   = 9;
-const byte DATACLK = 8;
-const byte DATA    = 7;
+const byte LATCH   = 9; // controller wire latch (OUT)
+const byte DATACLK = 8; // controller data clock (OUT)
+const byte DATA    = 7; // controller data wire  (IN)
 
-// For shift register for final output to bluetooth
+// For shift register (74HC595) for final output to bluetooth
 // Using ez-bluetooth keyboard so no need to send data serially.
-const byte SHIFTER  = 2;
-const byte SEND_OUT = 3;
-const byte BTN_CHANNEL_0 = 5;
-const byte BTN_CHANNEL_1 = 6;
+const byte SHIFTER_RCLK   = 6; // latch for shift register     (OUT)
+const byte SEND_OUT_SRCLK = 5; // shift bit in shift register  (OUT)
+const byte BTN_CHANNEL_0 = 11; // bit pattern for buttons 1-8  (OUT)
+const byte BTN_CHANNEL_1 = 10; // bit pattern for buttons 8-12 (OUT)
 
 // Functions for shift register SN74HC595 (https://www.sparkfun.com/products/13699)
 void shift();
@@ -49,16 +52,16 @@ void setup() {
   pinMode(LATCH  , OUTPUT); // latch
   pinMode(DATA   , INPUT);  // recieved bit from controller
 
-  pinMode(SHIFTER      , OUTPUT);
-  pinMode(SEND_OUT     , OUTPUT);
+  pinMode(SHIFTER_RCLK   , OUTPUT); // latch
+  pinMode(SEND_OUT_SRCLK , OUTPUT); // clock
   pinMode(BTN_CHANNEL_0, OUTPUT);
   pinMode(BTN_CHANNEL_1, OUTPUT);
 
   // Initial
   digitalWrite(DATACLK  , HIGH);
   digitalWrite(LATCH    , LOW);
-  digitalWrite(SHIFTER  , LOW);
-  digitalWrite(SEND_OUT , LOW);
+  digitalWrite(SHIFTER_RCLK  , LOW);
+  digitalWrite(SEND_OUT_SRCLK, LOW);
   digitalWrite(BTN_CHANNEL_0 , LOW);
   digitalWrite(BTN_CHANNEL_1 , LOW);
 }
@@ -142,16 +145,21 @@ void loop() {
     }
     pulseCount = 0;
 
-    // invert data because the controller sees 0 as a button press
-    // and I want a 1 so that it will correspond to the ez-bluetooth
-    // keyboard since you have to send it power to a wire for it to send
-    // a signal.
+    // Invert bit pattern because the controller sees 0 as a button press
+    // and I want a 1 to flash the boards led.
+    
     data[0] ^= 0xFF;
     data[1] ^= 0xFF;
 
     // Debug information
-    //printData();
     buttonIsPressed(data[0], data[1]);
+    //printData();
+
+    // Need to invert the bit pattern back as a 0 in the bit pattern
+    // means the button is pressed and that's how the blubetooth module
+    // knows to respond to a button press.
+    data[0] ^= 0xFF;
+    data[1] ^= 0xFF;
     
     // output data to shifter (serially)
     outToShiftRegister(data[0], data[1]);
@@ -162,37 +170,47 @@ void loop() {
   }
 }
 
+// Shift set bit over to next bit position in the shift register
 void shift()
 {
-  digitalWrite(SHIFTER, HIGH);
-  digitalWrite(SHIFTER, LOW);
+  digitalWrite(SEND_OUT_SRCLK, HIGH);
+  digitalWrite(SEND_OUT_SRCLK, LOW);
 }
 
+// Set bit
 void setBit(const byte channel, const byte data_bit)
 {
   digitalWrite(channel, data_bit);
 }
 
-void sendData()
+// Wait for bit fields to bits to be set
+void lockData()
 {
-  digitalWrite(SEND_OUT, HIGH);
-  digitalWrite(SEND_OUT, LOW);
+  digitalWrite(SHIFTER_RCLK, LOW);
 }
 
+// Release set bits through the wires
+void unlockData()
+{
+  digitalWrite(SHIFTER_RCLK, HIGH);
+}
+
+// Send button data through shift register and into bluetooth
 void outToShiftRegister(const byte data0, const byte data1)
 {
-  byte out = 0;
+  //shiftOut(BTN_CHANNEL_0, SEND_OUT_SRCLK, LSBFIRST, data0);
+  
+  lockData(); // collect bit data
+
+  // Fill shift register completely with 8 bits to preserve bit order
   for(byte i=0; i<8; i++)
   {
-    out = (data0 >> i) & 0x1;
-    setBit(BTN_CHANNEL_0, out);
-
-    out = (data1 >> i) & 0x1;
-    setBit(BTN_CHANNEL_1, out);
-    
+    setBit(BTN_CHANNEL_0, (data0 >> i) & 0x01);
+    setBit(BTN_CHANNEL_1, (data1 >> i) & 0x01);
     shift();
   }
-  sendData();
+
+  unlockData(); // send through
 }
 
 void printData()
@@ -210,6 +228,7 @@ void printData()
   }
 }
 
+// Light up on board led if any button is pressed in the bit pattern
 void buttonIsPressed(byte channel_1, byte channel_2)
 {
   if( channel_1 > 0 || channel_2 > 0)
